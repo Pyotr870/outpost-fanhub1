@@ -5,6 +5,7 @@ on:
     branches: [promote-outpost-v08]
     paths:
       - '.github/workflows/promote-archive.yml'
+      - 'PROMOTE-ARCHIVE.txt'
 
 permissions:
   contents: write
