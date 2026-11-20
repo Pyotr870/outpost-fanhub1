@@ -56,9 +56,9 @@ jobs:
           duplicates = sorted({x for x in parser.ids if parser.ids.count(x) > 1})
           print(f"HTML parsed; local references={len(parser.refs)}; IDs={len(parser.ids)}")
           if missing:
-              print("Missing local references:", *missing, sep="\\n- ")
+              print("Missing local references:", *missing, sep="\n- ")
           if duplicates:
-              print("Duplicate IDs:", *duplicates, sep="\\n- ")
+              print("Duplicate IDs:", *duplicates, sep="\n- ")
           if missing or duplicates:
               sys.exit(1)
           print("Required archive files and local references passed.")
@@ -77,11 +77,11 @@ jobs:
               if result.returncode:
                   failed.append((str(f), result.stderr))
           html = (root / "index.html").read_text(encoding="utf-8")
-          scripts = re.findall(r"<script([^>]*)>(.*?)</script\\s*>", html, re.I | re.S)
+          scripts = re.findall(r"<script([^>]*)>(.*?)</script\s*>", html, re.I | re.S)
           for i, (attrs, code) in enumerate(scripts, 1):
-              if not code.strip() or re.search(r'type=["\\'](?:application/ld\\+json|application/json)["\\']', attrs, re.I):
+              if not code.strip() or re.search(r'type=["\'](?:application/ld\+json|application/json)["\']', attrs, re.I):
                   continue
-              suffix = ".mjs" if re.search(r'type=["\\']module["\\']', attrs, re.I) else ".js"
+              suffix = ".mjs" if re.search(r'type=["\']module["\']', attrs, re.I) else ".js"
               with tempfile.NamedTemporaryFile("w", suffix=suffix, encoding="utf-8") as f:
                   f.write(code); f.flush()
                   result = subprocess.run(["node", "--check", str(f.name)], text=True, capture_output=True)
@@ -89,7 +89,7 @@ jobs:
                   failed.append((f"index.html inline script #{i}", result.stderr))
           if failed:
               for name, err in failed:
-                  print(f"\\n{name}\\n{err}")
+                  print(f"\n{name}\n{err}")
               sys.exit(1)
           print(f"JavaScript syntax passed: {len(files)} JS files, {len(scripts)} inline script blocks.")
           PY
@@ -109,7 +109,7 @@ jobs:
               "RLS enabled for photos": "alter table public.photos enable row level security" in sql,
               "profile policy scoped to auth.uid": "using (id = auth.uid())" in sql,
               "album policy scoped to auth.uid": "owner_id = auth.uid()" in sql,
-              "private storage bucket": re.search(r"values\\s*\\('outpost-photos',\\s*'outpost-photos',\\s*false", sql) is not None,
+              "private storage bucket": re.search(r"values\s*\('outpost-photos',\s*'outpost-photos',\s*false", sql) is not None,
               "storage policies scoped to auth.uid": "storage.foldername(name))[1] = auth.uid()::text" in sql,
               "no service-role key in frontend config": not re.search(r"service[_-]?role|sb_secret_", config, re.I),
               "service worker only removes its own cache family": "key.startsWith('outpost-shell-')" in sw,
@@ -119,7 +119,7 @@ jobs:
               print(f"{'PASS' if ok else 'FAIL'}: {label}")
           failed = [label for label, ok in checks.items() if not ok]
           if failed:
-              print("Backend security-default audit failed:", *failed, sep="\\n- ")
+              print("Backend security-default audit failed:", *failed, sep="\n- ")
               sys.exit(1)
           print(f"Backend security-default audit passed ({len(checks)} checks).")
           PY
