@@ -37,6 +37,9 @@ jobs:
           import sys
           root = Path("unpacked/outpost_v08")
           source = (root / "index.html").read_text(encoding="utf-8")
+          if "0.7" in source:
+              print("Stale 0.7 version label remains in index.html")
+              sys.exit(1)
           class Audit(HTMLParser):
               def __init__(self):
                   super().__init__()
