@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/validate-archive.yml'
       - 'outpost_v08_deploy.zip'
+      - '.github/scripts/prepare-outpost.sh'
   workflow_dispatch:
 
 permissions:
@@ -26,6 +27,7 @@ jobs:
           test -f unpacked/outpost_v08/index.html
           test -f unpacked/outpost_v08/README.md
           test -f unpacked/outpost_v08/manifest.webmanifest
+          bash .github/scripts/prepare-outpost.sh unpacked/outpost_v08
 
       - name: Validate files and local references
         run: |
