@@ -61,17 +61,20 @@ jobs:
           from pathlib import Path
           import re, subprocess, tempfile, sys
           html = Path("index.html").read_text(encoding="utf-8")
-          scripts = re.findall(r"<script([^>]*)>(.*?)</script\\s*>", html, re.I | re.S)
+          scripts = re.findall(r'<script[^>]*>(.*?)</script\\s*>', html, re.I | re.S)
           failed = []
-          for i, (attrs, code) in enumerate(scripts, 1):
-              if not code.strip() or re.search(r'type=["\\'](?:application/ld\\+json|application/json)["\\']', attrs, re.I):
+          for i, code in enumerate(scripts, 1):
+              if not code.strip():
                   continue
               with tempfile.NamedTemporaryFile("w", suffix=".js", encoding="utf-8") as f:
-                  f.write(code); f.flush()
+                  f.write(code)
+                  f.flush()
                   result = subprocess.run(["node", "--check", f.name], text=True, capture_output=True)
-              if result.returncode: failed.append((i, result.stderr))
+              if result.returncode:
+                  failed.append((i, result.stderr))
           if failed:
-              for i, err in failed: print(f"Inline script #{i}\\n{err}")
+              for i, err in failed:
+                  print(f"Inline script #{i}\\n{err}")
               sys.exit(1)
           print(f"JavaScript syntax passed: {len(scripts)} inline script blocks.")
           PY
@@ -95,6 +98,8 @@ jobs:
               "service worker removes only its cache family": "key.startsWith('outpost-shell-')" in sw,
               "navigation-only offline fallback": "request.mode === 'navigate'" in sw,
           }
-          for label, ok in checks.items(): print(f"{'PASS' if ok else 'FAIL'}: {label}")
-          if not all(checks.values()): sys.exit(1)
+          for label, ok in checks.items():
+              print(f"{'PASS' if ok else 'FAIL'}: {label}")
+          if not all(checks.values()):
+              sys.exit(1)
           PY
