@@ -2,7 +2,7 @@ name: Validate OUTPOST v0.8 archive
 
 on:
   push:
-    branches: [outpost-deploy-setup]
+    branches: [outpost-deploy-setup, ci/security-audit]
     paths:
       - '.github/workflows/validate-archive.yml'
       - 'outpost_v08_deploy.zip'
