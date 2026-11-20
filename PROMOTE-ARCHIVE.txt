@@ -1,1 +1,1 @@
-Trigger source promotion after removing workflow-file writes from the runner.
+Trigger promotion with the repository deploy workflow preserved.
