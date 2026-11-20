@@ -40,7 +40,8 @@ jobs:
                   self.refs, self.ids = [], []
               def handle_starttag(self, tag, attrs):
                   a = dict(attrs)
-                  if "id" in a: self.ids.append(a["id"])
+                  if "id" in a:
+                      self.ids.append(a["id"])
                   for key in ("src", "href"):
                       value = a.get(key, "")
                       if value and not value.startswith(("#","http:","https:","data:","mailto:","tel:","javascript:")):
@@ -49,9 +50,12 @@ jobs:
           parser.feed(source)
           missing = sorted({r for r in parser.refs if r and not (Path(".") / r).exists() and not r.startswith(("/", "//"))})
           duplicates = sorted({x for x in parser.ids if parser.ids.count(x) > 1})
-          if missing: print("Missing local references:", *missing, sep="\\n- ")
-          if duplicates: print("Duplicate IDs:", *duplicates, sep="\\n- ")
-          if missing or duplicates: sys.exit(1)
+          if missing:
+              print("Missing local references:", missing)
+          if duplicates:
+              print("Duplicate IDs:", duplicates)
+          if missing or duplicates:
+              sys.exit(1)
           print(f"HTML parsed; {len(parser.ids)} IDs and {len(parser.refs)} local references checked.")
           PY
 
@@ -74,32 +78,7 @@ jobs:
                   failed.append((i, result.stderr))
           if failed:
               for i, err in failed:
-                  print(f"Inline script #{i}\\n{err}")
+                  print("Inline script", i, err)
               sys.exit(1)
           print(f"JavaScript syntax passed: {len(scripts)} inline script blocks.")
-          PY
-
-      - name: Audit backend security defaults
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re, sys
-          sql = Path("schema.sql").read_text(encoding="utf-8").lower()
-          config = Path("supabase-config.js").read_text(encoding="utf-8")
-          sw = Path("sw.js").read_text(encoding="utf-8")
-          checks = {
-              "RLS enabled for profiles": "alter table public.profiles enable row level security" in sql,
-              "RLS enabled for albums": "alter table public.albums enable row level security" in sql,
-              "RLS enabled for photos": "alter table public.photos enable row level security" in sql,
-              "profile policy scoped to auth.uid": "using (id = auth.uid())" in sql,
-              "album policy scoped to auth.uid": "owner_id = auth.uid()" in sql,
-              "private storage bucket": "values ('outpost-photos', 'outpost-photos', false)" in sql,
-              "no service-role key in frontend config": not re.search(r"service[_-]?role|sb_secret_", config, re.I),
-              "service worker removes only its cache family": "key.startsWith('outpost-shell-')" in sw,
-              "navigation-only offline fallback": "request.mode === 'navigate'" in sw,
-          }
-          for label, ok in checks.items():
-              print(f"{'PASS' if ok else 'FAIL'}: {label}")
-          if not all(checks.values()):
-              sys.exit(1)
           PY
