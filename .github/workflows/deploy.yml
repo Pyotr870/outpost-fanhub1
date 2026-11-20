@@ -4,9 +4,15 @@ on:
   push:
     branches: [main]
     paths:
-      - 'outpost_v08_deploy.zip'
+      - 'index.html'
+      - '*.md'
+      - '*.sql'
+      - '*.js'
+      - '*.webmanifest'
+      - '*.svg'
+      - '*.png'
+      - '*.html'
       - '.github/workflows/deploy.yml'
-      - '.github/scripts/prepare-outpost.sh'
   workflow_dispatch:
 
 permissions:
@@ -25,14 +31,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare site from v0.8 archive
+      - name: Prepare site from repository root
         run: |
-          mkdir -p unpacked site
-          unzip -q outpost_v08_deploy.zip -d unpacked
-          test -f unpacked/outpost_v08/index.html
-          bash .github/scripts/prepare-outpost.sh unpacked/outpost_v08
-          cp -R unpacked/outpost_v08/. site/
+          mkdir -p site
+          rsync -a --exclude='.git' --exclude='.github' --exclude='outpost_v08_deploy.zip' --exclude='outpost-fanhub1-main 2.zip' ./ site/
           test -f site/index.html
+          test "$(wc -c < site/index.html)" -gt 150000
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
