@@ -26,6 +26,7 @@ jobs:
           test -f unpacked/outpost_v08/index.html
           bash .github/scripts/prepare-outpost.sh unpacked/outpost_v08
           cp -R unpacked/outpost_v08/. .
+          git checkout origin/main -- .github/workflows/deploy.yml
           test -f index.html
           test "$(wc -c < index.html)" -gt 150000
           python3 - <<'PY'
