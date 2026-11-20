@@ -101,3 +101,5 @@ jobs:
           path: unpacked/outpost_v08/
           if-no-files-found: error
           retention-days: 3
+
+# The archive preparation script is shared with the Pages deployment workflow.
