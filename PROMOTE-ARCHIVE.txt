@@ -1,1 +1,0 @@
-Trigger promotion with the repository deploy workflow preserved.
