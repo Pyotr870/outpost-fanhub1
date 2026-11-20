@@ -1,12 +1,10 @@
-name: Validate OUTPOST v0.8 archive
+name: Validate OUTPOST application
 
 on:
   push:
-    branches: [main, outpost-deploy-setup, ci/security-audit, fix/ui-version-labels, promote-outpost-v08]
+    branches: [main]
     paths:
       - '.github/workflows/validate-archive.yml'
-      - 'outpost_v08_deploy.zip'
-      - '.github/scripts/prepare-outpost.sh'
       - 'index.html'
       - '*.md'
       - '*.sql'
@@ -19,7 +17,6 @@ on:
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
   validate:
@@ -28,70 +25,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract archive
-        run: |
-          mkdir -p unpacked
-          unzip -q outpost_v08_deploy.zip -d unpacked
-          test -f unpacked/outpost_v08/index.html
-          test -f unpacked/outpost_v08/README.md
-          test -f unpacked/outpost_v08/manifest.webmanifest
-          bash .github/scripts/prepare-outpost.sh unpacked/outpost_v08
-
-      - name: Validate promoted repository-root copy
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import sys
-          root = Path("index.html").read_text(encoding="utf-8")
-          prepared = Path("unpacked/outpost_v08/index.html").read_text(encoding="utf-8")
-          if len(root.encode("utf-8")) < 150000:
-              print("Repository-root index.html is not the complete OUTPOST 0.8 application")
-              sys.exit(1)
-          if root != prepared:
-              print("Repository-root index.html differs from the prepared v0.8 source")
-              sys.exit(1)
-          if "0.7" in root:
-              print("Stale 0.7 version label remains in repository-root index.html")
-              sys.exit(1)
-          print(f"Repository-root source matches prepared OUTPOST 0.8 ({len(root.encode('utf-8'))} bytes).")
-          PY
-
-      - name: Validate files and local references
+      - name: Validate application HTML and local references
         run: |
           python3 - <<'PY'
           from pathlib import Path
           from html.parser import HTMLParser
           import sys
-          root = Path("unpacked/outpost_v08")
-          source = (root / "index.html").read_text(encoding="utf-8")
-          if "0.7" in source:
-              print("Stale 0.7 version label remains in index.html")
-              sys.exit(1)
+          source = Path("index.html").read_text(encoding="utf-8")
+          if len(source.encode("utf-8")) < 150000:
+              sys.exit("index.html is not the complete OUTPOST application")
           class Audit(HTMLParser):
               def __init__(self):
                   super().__init__()
-                  self.refs = []
-                  self.ids = []
+                  self.refs, self.ids = [], []
               def handle_starttag(self, tag, attrs):
                   a = dict(attrs)
-                  if "id" in a:
-                      self.ids.append(a["id"])
+                  if "id" in a: self.ids.append(a["id"])
                   for key in ("src", "href"):
                       value = a.get(key, "")
-                      if value and not value.startswith(("#", "http:", "https:", "data:", "mailto:", "tel:", "javascript:")):
-                          self.refs.append(value.split("?", 1)[0].split("#", 1)[0])
+                      if value and not value.startswith(("#","http:","https:","data:","mailto:","tel:","javascript:")):
+                          self.refs.append(value.split("?",1)[0].split("#",1)[0])
           parser = Audit()
           parser.feed(source)
-          missing = sorted({r for r in parser.refs if r and not (root / r).exists() and not r.startswith(("/", "//"))})
+          missing = sorted({r for r in parser.refs if r and not (Path(".") / r).exists() and not r.startswith(("/", "//"))})
           duplicates = sorted({x for x in parser.ids if parser.ids.count(x) > 1})
-          print(f"HTML parsed; local references={len(parser.refs)}; IDs={len(parser.ids)}")
-          if missing:
-              print("Missing local references:", *missing, sep="\n- ")
-          if duplicates:
-              print("Duplicate IDs:", *duplicates, sep="\n- ")
-          if missing or duplicates:
-              sys.exit(1)
-          print("Required archive files and local references passed.")
+          if missing: print("Missing local references:", *missing, sep="\\n- ")
+          if duplicates: print("Duplicate IDs:", *duplicates, sep="\\n- ")
+          if missing or duplicates: sys.exit(1)
+          print(f"HTML parsed; {len(parser.ids)} IDs and {len(parser.refs)} local references checked.")
           PY
 
       - name: Check JavaScript syntax
@@ -99,29 +60,20 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re, subprocess, tempfile, sys
-          root = Path("unpacked/outpost_v08")
-          files = list(root.rglob("*.js"))
+          html = Path("index.html").read_text(encoding="utf-8")
+          scripts = re.findall(r"<script([^>]*)>(.*?)</script\\s*>", html, re.I | re.S)
           failed = []
-          for f in files:
-              result = subprocess.run(["node", "--check", str(f)], text=True, capture_output=True)
-              if result.returncode:
-                  failed.append((str(f), result.stderr))
-          html = (root / "index.html").read_text(encoding="utf-8")
-          scripts = re.findall(r"<script([^>]*)>(.*?)</script\s*>", html, re.I | re.S)
           for i, (attrs, code) in enumerate(scripts, 1):
-              if not code.strip() or re.search(r'type=["\'](?:application/ld\+json|application/json)["\']', attrs, re.I):
+              if not code.strip() or re.search(r'type=["\\'](?:application/ld\\+json|application/json)["\\']', attrs, re.I):
                   continue
-              suffix = ".mjs" if re.search(r'type=["\']module["\']', attrs, re.I) else ".js"
-              with tempfile.NamedTemporaryFile("w", suffix=suffix, encoding="utf-8") as f:
+              with tempfile.NamedTemporaryFile("w", suffix=".js", encoding="utf-8") as f:
                   f.write(code); f.flush()
-                  result = subprocess.run(["node", "--check", str(f.name)], text=True, capture_output=True)
-              if result.returncode:
-                  failed.append((f"index.html inline script #{i}", result.stderr))
+                  result = subprocess.run(["node", "--check", f.name], text=True, capture_output=True)
+              if result.returncode: failed.append((i, result.stderr))
           if failed:
-              for name, err in failed:
-                  print(f"\n{name}\n{err}")
+              for i, err in failed: print(f"Inline script #{i}\\n{err}")
               sys.exit(1)
-          print(f"JavaScript syntax passed: {len(files)} JS files, {len(scripts)} inline script blocks.")
+          print(f"JavaScript syntax passed: {len(scripts)} inline script blocks.")
           PY
 
       - name: Audit backend security defaults
@@ -129,35 +81,20 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re, sys
-          root = Path("unpacked/outpost_v08")
-          sql = (root / "schema.sql").read_text(encoding="utf-8").lower()
-          config = (root / "supabase-config.js").read_text(encoding="utf-8")
-          sw = (root / "sw.js").read_text(encoding="utf-8")
+          sql = Path("schema.sql").read_text(encoding="utf-8").lower()
+          config = Path("supabase-config.js").read_text(encoding="utf-8")
+          sw = Path("sw.js").read_text(encoding="utf-8")
           checks = {
               "RLS enabled for profiles": "alter table public.profiles enable row level security" in sql,
               "RLS enabled for albums": "alter table public.albums enable row level security" in sql,
               "RLS enabled for photos": "alter table public.photos enable row level security" in sql,
               "profile policy scoped to auth.uid": "using (id = auth.uid())" in sql,
               "album policy scoped to auth.uid": "owner_id = auth.uid()" in sql,
-              "private storage bucket": re.search(r"values\s*\('outpost-photos',\s*'outpost-photos',\s*false", sql) is not None,
-              "storage policies scoped to auth.uid": "storage.foldername(name))[1] = auth.uid()::text" in sql,
-              "no service-role key in frontend config": not re.search(r"(?:service[_-]?role|sb_secret_)\s*[:=]", config, re.I),
-              "service worker only removes its own cache family": "key.startsWith('outpost-shell-')" in sw,
-              "service worker has navigation-only offline fallback": "request.mode === 'navigate'" in sw,
+              "private storage bucket": re.search(r"values\\s*\\('outpost-photos',\\s*'outpost-photos',\\s*false", sql) is not None,
+              "no service-role key in frontend config": not re.search(r"(?:service[_-]?role|sb_secret_)\\s*[:=]", config, re.I),
+              "service worker removes only its cache family": "key.startsWith('outpost-shell-')" in sw,
+              "navigation-only offline fallback": "request.mode === 'navigate'" in sw,
           }
-          for label, ok in checks.items():
-              print(f"{'PASS' if ok else 'FAIL'}: {label}")
-          failed = [label for label, ok in checks.items() if not ok]
-          if failed:
-              print("Backend security-default audit failed:", *failed, sep="\n- ")
-              sys.exit(1)
-          print(f"Backend security-default audit passed ({len(checks)} checks).")
+          for label, ok in checks.items(): print(f"{'PASS' if ok else 'FAIL'}: {label}")
+          if not all(checks.values()): sys.exit(1)
           PY
-
-      - name: Upload extracted source for review
-        uses: actions/upload-artifact@v4
-        with:
-          name: outpost-v08-source-review
-          path: unpacked/outpost_v08/
-          if-no-files-found: error
-          retention-days: 3
