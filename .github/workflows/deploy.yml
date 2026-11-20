@@ -6,6 +6,7 @@ on:
     paths:
       - 'outpost_v08_deploy.zip'
       - '.github/workflows/deploy.yml'
+      - '.github/scripts/prepare-outpost.sh'
   workflow_dispatch:
 
 permissions:
@@ -29,6 +30,7 @@ jobs:
           mkdir -p unpacked site
           unzip -q outpost_v08_deploy.zip -d unpacked
           test -f unpacked/outpost_v08/index.html
+          bash .github/scripts/prepare-outpost.sh unpacked/outpost_v08
           cp -R unpacked/outpost_v08/. site/
           test -f site/index.html
 
