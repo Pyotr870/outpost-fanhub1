@@ -111,7 +111,7 @@ jobs:
               "album policy scoped to auth.uid": "owner_id = auth.uid()" in sql,
               "private storage bucket": re.search(r"values\s*\('outpost-photos',\s*'outpost-photos',\s*false", sql) is not None,
               "storage policies scoped to auth.uid": "storage.foldername(name))[1] = auth.uid()::text" in sql,
-              "no service-role key in frontend config": not re.search(r"(?:service[_-]?role|sb_secret_)\\s*[:=]", config, re.I),
+              "no service-role key in frontend config": not re.search(r"(?:service[_-]?role|sb_secret_)\s*[:=]", config, re.I),
               "service worker only removes its own cache family": "key.startsWith('outpost-shell-')" in sw,
               "service worker has navigation-only offline fallback": "request.mode === 'navigate'" in sw,
           }
