@@ -32,17 +32,14 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           from html.parser import HTMLParser
-          import re, sys
+          import sys
           root = Path("unpacked/outpost_v08")
-          html = root / "index.html"
-          source = html.read_text(encoding="utf-8")
+          source = (root / "index.html").read_text(encoding="utf-8")
           class Audit(HTMLParser):
               def __init__(self):
                   super().__init__()
                   self.refs = []
                   self.ids = []
-                  self.inline_scripts = 0
-                  self.errors = []
               def handle_starttag(self, tag, attrs):
                   a = dict(attrs)
                   if "id" in a:
@@ -78,11 +75,12 @@ jobs:
               if result.returncode:
                   failed.append((str(f), result.stderr))
           html = (root / "index.html").read_text(encoding="utf-8")
-          blocks = re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script\s*>", html, re.I | re.S)
-          for i, code in enumerate(blocks, 1):
-              if not code.strip():
+          scripts = re.findall(r"<script([^>]*)>(.*?)</script\s*>", html, re.I | re.S)
+          for i, (attrs, code) in enumerate(scripts, 1):
+              if not code.strip() or re.search(r'type=["\'](?:application/ld\+json|application/json)["\']', attrs, re.I):
                   continue
-              with tempfile.NamedTemporaryFile("w", suffix=".js", encoding="utf-8") as f:
+              suffix = ".mjs" if re.search(r'type=["\']module["\']', attrs, re.I) else ".js"
+              with tempfile.NamedTemporaryFile("w", suffix=suffix, encoding="utf-8") as f:
                   f.write(code); f.flush()
                   result = subprocess.run(["node", "--check", f.name], text=True, capture_output=True)
               if result.returncode:
@@ -91,7 +89,7 @@ jobs:
               for name, err in failed:
                   print(f"\n{name}\n{err}")
               sys.exit(1)
-          print(f"JavaScript syntax passed: {len(files)} JS files, {len(blocks)} inline script blocks.")
+          print(f"JavaScript syntax passed: {len(files)} JS files, {len(scripts)} inline script blocks.")
           PY
 
       - name: Upload extracted source for review
