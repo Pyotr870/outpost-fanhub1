@@ -77,6 +77,9 @@ for name in ("SUPABASE-SETUP.md", "schema.sql", "supabase-config.js", "index.htm
     text = text.replace("OUTPOST 0.7", "OUTPOST 0.8")
     text = text.replace("OUTPOST 0.6 cloud backend", "OUTPOST 0.8 cloud backend")
     text = text.replace("OUTPOST 0.6", "OUTPOST 0.8")
+    if name == "index.html":
+        # The visible footer and all locale variants must match the 0.8 archive.
+        text = text.replace("0.7", "0.8")
     text = text.replace("## Что уже реализовано в 0.6", "## Что уже реализовано в 0.8")
     path.write_text(text, encoding="utf-8")
 
