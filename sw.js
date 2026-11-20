@@ -1,4 +1,4 @@
-const CACHE = 'outpost-shell-v09';
+const CACHE = 'outpost-shell-v10';
 const BASE = new URL('.', self.location).pathname;
 const ASSETS = [
   BASE,
