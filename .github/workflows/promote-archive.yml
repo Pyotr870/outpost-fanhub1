@@ -28,7 +28,12 @@ jobs:
           cp -R unpacked/outpost_v08/. .
           test -f index.html
           test "$(wc -c < index.html)" -gt 150000
-          ! grep -q '0.7' index.html
+          python3 - <<'PY'
+          from pathlib import Path
+          page = Path('index.html').read_text(encoding='utf-8')
+          stale = ('Версия 0.7', 'Version 0.7', 'OUTPOST · BUILD 0.7', 'OUTPOST · VERSION 0.7')
+          assert not any(label in page for label in stale), 'stale OUTPOST version label remains'
+          PY
 
       - name: Switch Pages deployment to the repository root
         run: |
