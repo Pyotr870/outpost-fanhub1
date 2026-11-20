@@ -1,1 +1,1 @@
-Trigger source promotion after the narrowed version-label check.
+Trigger source promotion after removing workflow-file writes from the runner.
